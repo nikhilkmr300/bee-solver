@@ -4,7 +4,10 @@ import argparse
 import os
 import readline
 
+from scraper import fetch_chars
+
 DICT_PATH = "/usr/share/dict/words"
+DASH_LEN = 10
 
 
 def cleanup_string(s):
@@ -42,32 +45,32 @@ def read_center():
     return center
 
 
-def read_chars():
+def read_outers():
     def prompt():
-        return str(input("chars> "))
+        return str(input("outers> "))
 
-    def is_valid(chars):
-        return len(chars) == 6 and chars.isalpha()
+    def is_valid(outers):
+        return len(outers) == 6 and outers.isalpha()
 
-    chars = None
+    outers = None
 
-    while not chars:
-        chars = prompt()
+    while not outers:
+        outers = prompt()
 
-        if is_valid(chars):
-            chars = chars.lower()
+        if is_valid(outers):
+            outers = outers.lower()
         else:
-            chars = None
+            outers = None
 
-    return chars
-
-
-def can_be_formed(word, center, chars):
-    return center in word and (set(word) - {center}).issubset(chars)
+    return outers
 
 
-def is_pangram(word, center, chars):
-    return can_be_formed(word, center, chars) and set(word) == set(chars) | {center}
+def can_be_formed(word, center, outers):
+    return center in word and (set(word) - {center}).issubset(outers)
+
+
+def is_pangram(word, center, outers):
+    return can_be_formed(word, center, outers) and set(word) == set(outers) | {center}
 
 
 def format_word(word, center):
@@ -80,34 +83,47 @@ def format_word(word, center):
     return "".join(formatted_word)
 
 
-def print_valid_words(valid_words, center, chars):
+def print_valid_words(valid_words, center, outers):
     for valid_word in valid_words:
-        if is_pangram(valid_word, center, chars):
+        if is_pangram(valid_word, center, outers):
             print(valid_word.upper())
         else:
             print(format_word(valid_word, center))
 
 
+def print_dashes():
+    print("-" * DASH_LEN)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog=os.path.basename(__file__))
     parser.add_argument("-d", "--dict", help="use dictionary at this path")
+    parser.add_argument("-l", "--live", action="store_true", help="solves today's live puzzle")
 
     args = parser.parse_args()
 
     DICT_PATH = args.dict if args.dict is not None else DICT_PATH
     dictionary = read_dict(DICT_PATH)
 
-    center = read_center()
-    chars = read_chars()
+    if args.live:
+        center, outers = fetch_chars()
+    else:
+        center = read_center()
+        outers = read_outers()
 
     valid_words = []
     for word in dictionary:
-        if len(word) >= 4 and can_be_formed(word, center, chars):
+        if len(word) >= 4 and can_be_formed(word, center, outers):
             valid_words.append(word)
     valid_words.sort()
 
-    print("-" * 10)
-    print_valid_words(valid_words, center, chars)
-    print("-" * 10)
+    print(f"center = {center}")
+    print(f"outers = {outers}")
+
+    print_dashes()
+
+    print_valid_words(valid_words, center, outers)
+
+    print_dashes()
 
     print(f"Found {len(valid_words)} words")
